@@ -810,6 +810,79 @@ Example:
 		}
 	}
 
+	/**
+	 * @param {Object} options
+	 * @param {string} options.apiUrl URL to MediaWiki API
+	 * @param {number} options.interval Wait time between API fetches (in milliseconds)
+	 */
+	function FeedSource(options) {
+		var req, timeout,
+			events = {
+				rc: $.Callbacks('memory'),
+				error: $.Callbacks('memory')
+			};
+
+		function fetch() {
+			req = $.ajax({
+				url: options.apiUrl,
+				dataType: 'json',
+				data: $.extend(getApiRcParams(opt.rc), {
+					format: 'json',
+					action: 'query',
+					list: 'recentchanges'
+				})
+			});
+			req
+				.then(function (data) {
+					timeout = setTimeout(fetch, options.interval);
+					if (data.error) {
+						return $.Deferred().reject(data.error.code || 'unknown');
+					}
+					return data.query.recentchanges;
+				})
+				.then(events.rc.fire, events.error.fire);
+		}
+
+		this.start = function start() {
+			if (req) {
+				req.abort();
+			}
+			if (timeout) {
+				clearTimeout(timeout);
+			}
+			fetch();
+		};
+
+		this.on = function (name, callback) {
+			if (events.hasOwnProperty(name)) {
+				events[name].add(callback);
+			}
+		};
+
+		this.off = function (name, callback) {
+			if (events.hasOwnProperty(name)) {
+				events[name].remove(callback);
+			}
+		};
+
+		this.pause = function () {
+			if (req) {
+				req.abort();
+				req = null;
+			}
+			clearTimeout(timeout);
+		};
+
+		this.resume = function () {
+			this.start();
+		};
+
+		this.config = function (newOptions) {
+			options = newOptions;
+			this.start();
+		};
+	}
+
 	function updateFeed() {
 		if (updateReq) {
 			updateReq.abort();
