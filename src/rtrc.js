@@ -63,6 +63,7 @@
 
 	prevFeedHtml,
 	updateReq,
+	source,
 
 	/**
 	 * Feed options
@@ -1678,7 +1679,15 @@ Example:
 
 			buildInterface();
 			readPermalink();
-			updateFeedNow();
+
+			//updateFeedNow();
+			source = new FeedSource({
+				apiUrl: apiUrl,
+				interval: opt.app.refresh * 1000,
+				rcparams: opt.rc
+			});
+			source.start();
+
 			scrollIntoView($wrapper);
 			bindInterface();
 		});
